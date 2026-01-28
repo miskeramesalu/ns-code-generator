@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NS Code Generator – Nefas Silk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  background: #fff;
+  padding: 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* LOGO / TITLE */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  max-width: 90px;
+  margin-bottom: 10px;
+}
+
+.header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.header p {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+button {
+  background: #0563bb;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #044c8c;
+}
+
+.result {
+  background: #eef4ff;
+  padding: 15px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 18px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.note {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.role-box {
+  text-align: left;
+  margin-bottom: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="container" id="loginBox">
+  <div class="header">
+    <img src="../ns-code-generator/assets/nslogo.png" alt="NS Logo" class="logo">
+    <h1>NS Code Generator</h1>
+    <p>Nefas Silk Coffee</p>
+  </div>
+
+  <input id="loginUser" placeholder="Username">
+  <input id="loginPass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="showSignup()">Create Account</button>
+  <div class="note">Demo only – browser storage</div>
+</div>
+
+<!-- SIGNUP -->
+<div class="container" id="signupBox" style="display:none;">
+  <div class="header">
+    <img src="../ns-code-generator/assets/nslogo.png" alt="NS Logo" class="logo">
+    <h1>Create Account</h1>
+    <p>NS Code Generator</p>
+  </div>
+
+  <input id="signupUser" placeholder="Username">
+  <input id="signupPass" type="password" placeholder="Password">
+
+  <div class="role-box">
+    <label><input type="checkbox" value="NSS"> Sampling (NSS)</label><br>
+    <label><input type="checkbox" value="NSC"> Controlling (NSC)</label><br>
+    <label><input type="checkbox" value="NSL"> Laboratory (NSL)</label>
+  </div>
+
+  <button onclick="signup()">Register</button>
+  <button onclick="showLogin()">Back to Login</button>
+</div>
+
+<!-- APP -->
+<div class="container" id="appBox" style="display:none;">
+  <div class="header">
+    <img src="../ns-code-generator/assets/nslogo.png" alt="NS Logo" class="logo">
+    <h1>NS Code Generator</h1>
+    <p>Nefas Silk Coffee</p>
+  </div>
+
+  <select id="codeType"></select>
+  <button onclick="generateCode()">Generate Code</button>
+
+  <div class="result" id="output">---</div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+// Initialize storage
+if (!localStorage.users) {
+  localStorage.users = JSON.stringify([]);
+}
+
+// UI Switching
+function showSignup() {
+  loginBox.style.display = "none";
+  signupBox.style.display = "block";
+}
+
+function showLogin() {
+  signupBox.style.display = "none";
+  loginBox.style.display = "block";
+}
+
+// SIGNUP
+function signup() {
+  const u = signupUser.value.trim();
+  const p = signupPass.value;
+  const roles = [...document.querySelectorAll('input[type=checkbox]:checked')]
+                .map(cb => cb.value);
+
+  if (!u || !p || roles.length === 0) {
+    alert("Fill all fields and select at least one role");
+    return;
+  }
+
+  let users = JSON.parse(localStorage.users);
+
+  if (users.find(x => x.username === u)) {
+    alert("Username already exists");
+    return;
+  }
+
+  users.push({ username: u, password: p, role: roles });
+  localStorage.users = JSON.stringify(users);
+
+  alert("Account created. You can now login.");
+  showLogin();
+}
+
+// LOGIN
+function login() {
+  const u = loginUser.value;
+  const p = loginPass.value;
+  const users = JSON.parse(localStorage.users);
+
+  const user = users.find(x => x.username === u && x.password === p);
+  if (!user) {
+    alert("Invalid login");
+    return;
+  }
+
+  localStorage.currentUser = JSON.stringify(user);
+  loadApp();
+}
+
+// LOAD APP
+function loadApp() {
+  const user = JSON.parse(localStorage.currentUser || null);
+  if (!user) return;
+
+  loginBox.style.display = "none";
+  signupBox.style.display = "none";
+  appBox.style.display = "block";
+
+  const select = document.getElementById("codeType");
+  select.innerHTML = "";
+
+  user.role.forEach(r => {
+    const text =
+      r === "NSS" ? "Sampling Code (NSS)" :
+      r === "NSC" ? "Controlling Code (NSC)" :
+      "Laboratory Code (NSL)";
+    select.innerHTML += `<option value="${r}">${text}</option>`;
+  });
+}
+
+// GENERATE CODE
+function generateCode() {
+  const prefix = codeType.value;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
+
+  for (let i = 0; i < 8; i++) {
+    randomPart += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  output.textContent = `${prefix}-${randomPart}`;
+}
+
+// LOGOUT
+function logout() {
+  localStorage.removeItem("currentUser");
+  location.reload();
+}
+
+// Auto-login if session exists
+loadApp();
+</script>
+
+</body>
+</html>
